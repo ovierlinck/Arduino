@@ -31,6 +31,7 @@ bool TProgram::addCurve(TCurve& curve)
     Serial.println("ERROR on addCurve(): Curve must be applicable for at least one day");
     return;
   }
+  
   if (curve.getSetpoint(23, 59) == TCurve_NO_SETPOINT)
   {
     Serial.println("ERROR on addCurve(): Curve must not be empty");

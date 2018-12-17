@@ -77,13 +77,18 @@ CurvePoint_t& TCurve::getPoint(char index)
 
 char TCurve::getSetpoint(char h, char m)
 {
+  //Serial.println("getSetpoint()");
   char answer = TCurve_NO_SETPOINT;
   char index = 0;
   while (index < _nbPoints && !before(h, m, getPoint(index)))
   {
+    //sprintf(buffer,"   index=%d", index); 
+    //Serial.println(buffer);
     answer = getPoint(index).temp;
     index++;
   }
+  //sprintf(buffer,"   answer=%d", answer); 
+  //Serial.println(buffer);
   return answer;
 }
 

@@ -27,10 +27,10 @@ void testProgram()
   TCurve c2 = TCurve("week-end");
   c2.setApplicableForDay(5, true);
   c2.setApplicableForDay(6, true);
-  c1.addPoint(22, 7, 0);
-  c1.addPoint(TCurve_SETPOINT_OFF, 9, 0);
-  c1.addPoint(23, 20, 0);
-  c1.addPoint(16, 22, 0);
+  c2.addPoint(22, 7, 0);
+  c2.addPoint(18, 9, 0);
+  c2.addPoint(23, 20, 0);
+  c2.addPoint(16, 22, 0);
 
   prg.addCurve(c1);
   prg.addCurve(c2);
@@ -38,6 +38,9 @@ void testProgram()
   TCurve* c = prg.getCurveForDay(3);
   Serial.print("Curve for 3 = ");
   Serial.println(c->dump());
+
+  Serial.print("Setpoint for Day 3, 6:35 = ");
+  Serial.println(""+c->getSetpoint(6,35));
 
   TCurve* weekCurves[7];
   prg.getWeekCurves(weekCurves);
@@ -67,12 +70,12 @@ int i = 0;
 
 void loop()
 {
-  int day = (i / 24 / 60) % 7;
-  int h = (i / 60) % 24;
-  int m = i % 60;
+  int day = (i*16 / 24 / 60) % 7;
+  int h = (i*16 / 60) % 24;
+  int m = (i*16) % 60;
   String msg = "getSetpoint(";
   Serial.print(  msg+ day + ", " + h + ", " + m + ") : ");
-  Serial.println(prg.getSetpoint(day, h, m));
+  Serial.println(0 + prg.getSetpoint(day, h, m));
   
   i++;
 }
