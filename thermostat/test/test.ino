@@ -1,20 +1,29 @@
-#include "TCurve.h"
-#include "TProgram.h"
+#include <DHT.h>
 
-TCurve curve;
+#include <TCurve.h>
+#include <TProgram.h>
+#include "Controller.h"
+#include "Commands.h"
+#include "Notifier.h"
+
+#define RELAY_PIN 11
+
+#define DHTPIN 2
+#define DHTTYPE DHT22
+DHT dht(DHTPIN, DHTTYPE);
+
+#include "DS1307.h"
+
 TProgram prg = TProgram("prg");
 
-void testGetSetPoint(byte h, byte m)
+Mode mode = AUTO;
+unsigned char setpoint = 0;
+
+void createProgram()
 {
-  byte setPoint = curve.getSetpoint(h, m);
-  String msg = "getSetpoint(" ;
-  Serial.println(msg + h + ", " + m + ") : " + setPoint);
-}
-void testProgram()
-{
-  Serial.println("---------------------------- testProgram()");
+  Serial.println("Creating Program...");
   TCurve c1 = TCurve("week");
-  c1.setApplicableForDay(0, true);
+  c1.setApplicableForDay(0, false);
   c1.setApplicableForDay(1, true);
   c1.setApplicableForDay(2, true);
   c1.setApplicableForDay(3, true);
@@ -35,95 +44,227 @@ void testProgram()
   prg.addCurve(c1);
   prg.addCurve(c2);
 
-  TCurve* c = prg.getCurveForDay(3);
-  Serial.print("Curve for 3 = ");
-  Serial.println(c->dump());
+  dumpPrg();
+}
 
-  Serial.print("Setpoint for Day 3, 6:35 = ");
-  Serial.println(""+c->getSetpoint(6,35));
-
-  TCurve* weekCurves[7];
-  prg.getWeekCurves(weekCurves);
-  for (char day = 0; day < 7; day++)
+void dumpPrg()
+{
+  Serial.println("-- DUMP PRG ----------------------------------");
+  for (unsigned char i = 0; i < prg.getNbCurves(); i++)
   {
-    Serial.print("Day ");
-    Serial.print(day);
-    Serial.print(" : ");
-    Serial.println(weekCurves[day]->getName());
+    Serial.print(i);
+    Serial.print(": ");
+
+    TCurve* c = prg.getCurve(i);
+    Serial.println(c->dump());
   }
+  Serial.println("----------------------------------------------");
 
 }
+unsigned char getNbCurves()
+{
+  return prg.getNbCurves();
+}
+
+void deleteAllCurves()
+{
+  Serial.println("deleteAllCurves()");
+  prg.removeAllCurves();
+}
+
+void deleteCurve(unsigned char index)
+{
+  Serial.println(String("deleteCurve(") + index + ")");
+  prg.removeCurve(index);
+}
+
+unsigned char addCurve(TCurve c)
+{
+  Serial.println(String("addCurve(") + c.getName() + ")");
+  prg.addCurve(c);
+
+  return prg.getNbCurves();
+}
+
+TCurve* getCurve(unsigned char index)
+{
+  return prg.getCurve(index);
+}
+
+// Read sensor temperature DHT22 on pin DHT22_PIN and returns T (or -1 if error)
+float getTemperature()
+{
+  float t = dht.readTemperature();
+  if (isnan(t))
+  {
+    return -1.0;
+  }
+  return t;
+}
+
+void setMode(Mode pMode)
+{
+  mode = pMode;
+  Serial.println(String("MODE ") + getModeName(mode));
+  if (mode == OFF)
+  {
+    setSetpoint(0);
+  }
+  onMode(mode);
+}
+
+Mode getMode()
+{
+  return mode;
+}
+
+void setSetpoint(unsigned char pSetpoint)
+{
+  if (setpoint != pSetpoint)
+  {
+    Serial.println(String("Setpoint ") + pSetpoint);
+  }
+  setpoint = pSetpoint;
+  onSetpoint(setpoint);
+}
+
+unsigned char getSetpoint()
+{
+  return setpoint;
+}
+
+void setDate(unsigned char days, unsigned char months, unsigned int year, unsigned char dayOfWeek)
+{
+  Serial.println(String("setDate(") + days + "/" + months + "/" + year + ":" + dayOfWeek + ")");
+  set_current_date(days, months, year, dayOfWeek);
+}
+
+void setTime(unsigned char hours, unsigned char minutes)
+{
+  Serial.println(String("setTime(") + hours + ":" + minutes + ")");
+  set_current_time(hours, minutes);
+}
+
+bool getDate(unsigned char& days, unsigned char& months, unsigned int& year, unsigned char& dayOfWeek)
+{
+  DateTime_t now;
+  if (read_current_datetime(&now))
+  {
+    return false;
+  }
+  days = now.days;
+  months = now.months;
+  year = now.year;
+  dayOfWeek = now.day_of_week;
+
+  return true;
+}
+
+bool getTime(unsigned char& hours, unsigned char& minutes)
+{
+  DateTime_t now;
+  if (read_current_datetime(&now))
+  {
+    return false;
+  }
+  hours = now.hours;
+  minutes = now.minutes;
+
+  return true;
+}
+
+const char* getModeName(Mode mode)
+{
+  switch (mode)
+  {
+    case OFF: return "OFF";
+    case AUTO: return "AUTO";
+    case MANUAL: return "MANUAL";
+    default: return "**UNKNOWN**";
+  }
+}
+
+/*
+  Switch ON:
+  - mode off
+  - check clock. If OK : mode auto
+
+*/
+
 
 void setup()
 {
   Serial.begin(9600);
+  Serial1.begin(38400);
 
-  Serial.print("=====================================================");
+  Serial.println("== SETUP ========================================================");
 
-  curve.setName("Courbe1");
-  Serial.println(curve.dump());
+  pinMode(RELAY_PIN, OUTPUT);
+  dht.begin();
 
-  testProgram();
+  createProgram();
+
+  installCommands();
+
+  delay(1000); // To let time for clock to initialize!
+  initializeRTClock();
+
+  Serial.println("== SETUP DONE ===================================================");
+
 }
-
-int i = 0;
 
 void loop()
 {
-  int day = (i*16 / 24 / 60) % 7;
-  int h = (i*16 / 60) % 24;
-  int m = (i*16) % 60;
-  String msg = "getSetpoint(";
-  Serial.print(  msg+ day + ", " + h + ", " + m + ") : ");
-  Serial.println(0 + prg.getSetpoint(day, h, m));
+  processCommands();
+
+  DateTime_t now;
+  bool clockOK = true;
+  if (read_current_datetime(&now))
+  {
+    Serial.print("NO CLOCK!");
+    clockOK = false;
+  }
+  else
+  {
+    onDateTime(now.days, now.months, now.year, now.hours, now.minutes, now.seconds);
+  }
+
+  if (mode == AUTO)
+  {
+    if (!clockOK)
+    {
+      Serial.print("AUTO: NO CLOCK!");
+      setSetpoint(0);
+    }
+    else
+    {
+      setSetpoint(prg.getSetpoint(now.day_of_week, now.hours, now.minutes));
+
+      Serial.print(  String("AUTO: getSetpoint(") + (uint8_t)now.days + "/" + (uint8_t)now.months + "/" + (uint8_t)now.year + " "
+                     + (uint8_t)now.hours + "H" + (uint8_t)now.minutes + ", Day" + (uint8_t)now.day_of_week + ")" );
+    }
+  }
+  else
+  {
+    Serial.print(mode == OFF ? "OFF" : "MANUAL");
+    delay(50); // Otherwise, too fast for T reading
+  }
+
+  onMode(mode);
   
-  i++;
+  onSetpoint(setpoint);
+
+  float temp = getTemperature();
+  onTemperature(temp);
+
+  bool command = (temp >= 0 ? (temp < setpoint) : false);
+  onCommand(command);
+
+  Serial.println(String("\tsetPoint:") + (uint8_t)setpoint + "°\tTemp=" + temp + "°\tCommand=" + command + (command ? "=LOW" : "=HIGH"));
+
+  digitalWrite(RELAY_PIN , command ? LOW : HIGH);
+
+  delay(1000);
 }
 
-void loop2()
-{
-
-  curve.setWeekPattern(i & 127);
-  Serial.print(curve.getWeekPattern(), DEC);
-  Serial.print(" ");
-  Serial.print(curve.getWeekPattern(), BIN);
-  Serial.print(" ");
-  Serial.println(curve.dump());
-
-  i++;
-}
-
-void loop1()
-{
-
-  if (i < 7)
-  {
-    curve.setApplicableForDay(i, true);
-  }
-  else if (i < 15)
-  {
-    curve.setApplicableForDay(i, false);
-  }
-
-  if (i == 0)
-  {
-    Serial.println(curve.dump());
-    testGetSetPoint(4, 5); // on empty curve
-  }
-  else if (i < 15) // try more than allowed, to check error handling!
-  {
-    Serial.println(curve.dump());
-    curve.addPoint(i + 20, i + 1, i * 2);
-  }
-  else if (i < 30)
-  {
-    if (i % 20 == 0) Serial.println(curve.dump());
-    int m = (i - 15);
-    byte h = m / 60;
-    testGetSetPoint(h, m);
-  }
-
-  i++;
-
-}
 

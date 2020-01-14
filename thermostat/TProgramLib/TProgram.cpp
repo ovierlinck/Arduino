@@ -23,31 +23,33 @@ bool TProgram::addCurve(TCurve& curve)
   if (_nbCurves > TPROGRAM_MAX_CURVES)
   {
     Serial.println("ERROR: max nb curves reached");
-    return;
+    return false;
   }
 
   if (curve.getWeekPattern() == 0)
   {
     Serial.println("ERROR on addCurve(): Curve must be applicable for at least one day");
-    return;
+    return false;
   }
   
   if (curve.getSetpoint(23, 59) == TCurve_NO_SETPOINT)
   {
     Serial.println("ERROR on addCurve(): Curve must not be empty");
-    return;
+    return false;
   }
 
   for (int day = 0; day < 7; day++)
   {
-    if (curve.isApplicableForDay(day) && getCurve(day) != NULL)
+    if (curve.isApplicableForDay(day) && getCurveForDay(day) != NULL)
     {
       Serial.print("ERROR on addCurve(): Curve already defined for one of the days: ");
       Serial.println(day);
-      return;
+      return false;
     }
   }
   _curves[_nbCurves++] = curve;
+  
+  return true;
 }
 
 void TProgram::removeAllCurves()
@@ -55,12 +57,25 @@ void TProgram::removeAllCurves()
   _nbCurves = 0;
 }
 
-char TProgram::getNbCurves()
+unsigned char TProgram::getNbCurves()
 {
   return _nbCurves;
 }
 
-TCurve* TProgram::getCurve(char index)
+void TProgram::removeCurve(unsigned char index)
+{
+	if (index>=_nbCurves)
+	{
+		return;
+	}
+	for (unsigned char i=index;i<_nbCurves-1;i++)
+	{
+		_curves[i] = _curves[i+1];
+	}
+	_nbCurves--;
+}
+
+TCurve* TProgram::getCurve(unsigned char index)
 {
   if (index < 0 || index >= _nbCurves)
   {
@@ -70,7 +85,7 @@ TCurve* TProgram::getCurve(char index)
   return &_curves[index];
 }
 
-char TProgram::getSetpoint(char day, char h, char m)
+unsigned char TProgram::getSetpoint(unsigned char day, unsigned char h, unsigned char m)
 {
   if (_nbCurves == 0)
   {
@@ -84,7 +99,7 @@ char TProgram::getSetpoint(char day, char h, char m)
     TCurve* curve = getCurveForDay(day);
     if (curve != NULL)
     {
-      char setpoint = curve->getSetpoint(h, m);
+      unsigned char setpoint = curve->getSetpoint(h, m);
       if (setpoint != TCurve_NO_SETPOINT)
       {
         return setpoint;
@@ -99,17 +114,19 @@ char TProgram::getSetpoint(char day, char h, char m)
 }
 /** returns and array of curves, one per day of the week, 1 curve per day, 
 applicable for that day. One curve may be present for multiple days*/
+/*
 void TProgram::getWeekCurves(TCurve* curves[7] )
 {
-  for (char day = 0; day < 7; day++)
+  for (unsigned char day = 0; day < 7; day++)
   {
     curves[day] = getCurveForDay(day);
   }
 }
+*/
 
-TCurve* TProgram::getCurveForDay(char day)
+TCurve* TProgram::getCurveForDay(unsigned char day)
 {
-  for (char i = 0; i < _nbCurves; i++)
+  for (unsigned char i = 0; i < _nbCurves; i++)
   {
     if (_curves[i].isApplicableForDay(day))
     {

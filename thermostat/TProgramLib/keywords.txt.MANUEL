@@ -1,0 +1,52 @@
+TCurve_MAX_POINTS	LITERAL1
+TCurve_LENGTH_NAME	LITERAL1
+
+TCurve_NO_SETPOINT	LITERAL1
+TCurve_SETPOINT_OFF	LITERAL1
+
+CurvePoint_t	KEYWORD1
+
+TCurve	KEYWORD1
+
+newCurvePoint	KEYWORD2
+
+TCurve	KEYWORD2
+setName	KEYWORD2
+addPoint	KEYWORD2
+removeAllPoints	KEYWORD2
+
+setWeekPattern	KEYWORD2
+setApplicableForDay	KEYWORD2
+
+getName	KEYWORD2
+getNbPoints	KEYWORD2
+getPoint	KEYWORD2
+getWeekPattern	KEYWORD2
+isApplicableForDay	KEYWORD2
+getSetpoint	KEYWORD2
+
+dumpCurvePoint	KEYWORD2
+dump	KEYWORD2
+
+
+
+TPROGRAM_LENGTH_NAME	LITERAL1
+TPROGRAM_MAX_CURVES	LITERAL1
+
+TProgram	KEYWORD1
+
+TProgram	KEYWORD2
+
+
+setName	KEYWORD2
+getName	KEYWORD2
+
+addCurve	KEYWORD2
+removeAllCurves	KEYWORD2
+getNbCurves	KEYWORD2
+getCurve	KEYWORD2
+
+getSetpoint	KEYWORD2
+
+getWeekCurves	KEYWORD2
+getCurveForDay	KEYWORD2

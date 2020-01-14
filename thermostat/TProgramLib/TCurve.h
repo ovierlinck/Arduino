@@ -8,16 +8,16 @@ const char TCurve_NO_SETPOINT = 126;
 const char TCurve_SETPOINT_OFF = 0;
 
 typedef struct {
-  char temp;
-  char h;
-  char m;
+  unsigned char temp;
+  unsigned char h;
+  unsigned char m;
 } CurvePoint_t;
 
 class TCurve
 {
 
   public:
-    static CurvePoint_t newCurvePoint(char temp, char h, char m);
+    static CurvePoint_t newCurvePoint(unsigned char temp, unsigned char h, unsigned char m);
 
     TCurve();
     TCurve(const char* name);
@@ -26,24 +26,24 @@ class TCurve
 
     void setName(const char* name);
     /*Must be added after last one*/
-    void addPoint(char t, char h, char m);
+    void addPoint(unsigned char t, unsigned char h, unsigned char m);
     void addPoint(CurvePoint_t point);
     void removeAllPoints();
 
-    void setWeekPattern(char pattern);
-    void setApplicableForDay(char day, bool applicable);
+    void setWeekPattern(unsigned char pattern);
+    void setApplicableForDay(unsigned char day, bool applicable);
 
     // Querying
 
     const char* getName();
-    char getNbPoints();
-    CurvePoint_t& getPoint(char index);
+    unsigned char getNbPoints();
+    CurvePoint_t& getPoint(unsigned char index);
 
-    char getWeekPattern();
-    bool isApplicableForDay(char day);
+    unsigned char getWeekPattern();
+    bool isApplicableForDay(unsigned char day);
 
     /* TCurve_SETPOINT_OFF=0 if setpoint for OFF - TCurve_NO_SETPOINT=127 if NO setpoint */
-    char getSetpoint(char h, char m);
+    unsigned char getSetpoint(unsigned char h, unsigned char m);
 
     // Dump
 
@@ -53,15 +53,15 @@ class TCurve
   private:
 
     bool before(CurvePoint_t& p1, CurvePoint_t& p2);
-    bool before(char h, char m, CurvePoint_t& p);
+    bool before(unsigned char h, unsigned char m, CurvePoint_t& p);
 
     int minutes(CurvePoint_t& p);
-    int minutes(char h, char m);
+    int minutes(unsigned char h, unsigned char m);
 
     char _name[TCurve_LENGTH_NAME];
     CurvePoint_t _points[TCurve_MAX_POINTS];
-    char _nbPoints = 0;
-    char _weekPattern = 0;
+    unsigned char _nbPoints = 0;
+    unsigned char _weekPattern = 0;
 
 };
 
